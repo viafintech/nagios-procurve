@@ -1,25 +1,26 @@
-# Nagios Check for HP Procurve Switches
+# Nagios Check for HP ProCurve Switches
 
-This is a nagios check for HP Procurve switch monitoring using check_snmp. It provides necessary OID-Base and logic on top of nagios default SNMP check.
+This is a nagios check for HP ProCurve switches. It provides the necessary OID's and logic on top of nagios default SNMP check to get information about the monitored ProCurve switches.
 
-With this tool you can check the operational status of each individual interface as well as LACP-Trunks.
+This check will be enhanced from time to time but by now it only support monitoring of interface ports and LACP Trunks.
 
-# How to use?
+## Available versions
 
-Just get the check_procurve_ifoperstatus.sh and set the appropriate settings in the file like the patch to nagios check_snmp file
-and the OID-Base if it differs for you, then execute it:
+If you want the latest stable version you can easily stick with the master branch. If you want a specific version, checkout the respective branch.
+The latest stuff is always available on the Development branch.
 
-`./check_procurve_ifoperstatus.sh 10.10.10.2 public 1,2,4,8,23,49`
+## How to use?
 
-where you need to set the IP of the switch, the snmp community and the ports you want to check.
+Just get the check_procurve.sh and set the correct path to the check_snmp nagios check if its not already the correct default.
+Next versions will try to find that file itself and may get a fallback to different SNMP clients.
 
-# Known issues and a bit of a roadmap
+`./check_procurve.sh 10.10.10.2 public 1,2,4,8,23,49`
 
-By now i only have tested the module on a HP Procurve 2510G-24 switch but i will add support for more models (2530-24G) too.
-Send me one if you want me adding support for it.
+where you need to set the IP of the switch, the snmp community and the ports you want to check separated by commas.
+LACP Trunks start with a higher port number 49 and following.
 
-Also this script was written quick and dirty for fast usage, so the roadmap will be:
+## Contributing and License
 
-* Adding support for more models
-* Clean up the code and rewrite parts of it
-* Add functionality what users want
+Feel free to contribute by forking the check and creating feature branches which i can merge back. Please sign-off your commits. Every contribution is welcome, even just issues if you can't fix them yourself!
+
+Released under the MIT License

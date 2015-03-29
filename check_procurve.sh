@@ -1,19 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# check_procurve_ifoperstatus.sh v.1.0
-# (c) 2012 - Martin Seener
+# check_procurve.sh v1.1
+# (c) 2012-2015 - Martin Seener (martin.seener@barzahlen.de)
 
-# This Wrapper only works with the "check_snmp" Script from Nagios
-# and outputs the Operational State of every defined Switch Port
-# whereas 1 is up and everything else will exit the script as CRITICAL
-
-# This Script requires some Arguments: the Hostname/IP of the Switch and the community
-# Argument 3 is a list of the Ports to be monitored (comma-separated)
-# Ex.: check_procurve_ifoperstate.sh 10.10.10.2 public 1,2,4,8,23,49
-# 49 is normally used for the LAG/Trunk
-
-# Known Issues:
-#  - none yet
+PROGNAME=$(basename $0)
+VERSION="v1.1"
+AUTHOR="2012-2015, Martin Seener (martin@seener.de)"
 
 # Locations
 # Uncomment next line if its in the same path as this script, or define manually
@@ -21,20 +13,33 @@
 SCRIPTPATH="/usr/lib/nagios/plugins"
 CHECKSNMP=$SCRIPTPATH"/check_snmp"
 
-# Pre-define OID base so you only have to input the port numbers like 1,3,12
-# instead of the OID. The Base must end with a dot.
-# The OID below is tested with the HP ProCurve 2410G-24
-OIDBASE="1.3.6.1.2.1.2.2.1.8."
-# Comment out OIDBASE above if you want to use full OIDs instead of only the port numbers
-#OIDBASE=""
+# Pre-defined OID's for several checks
+OID_IFOPERSTATUS="1.3.6.1.2.1.2.2.1.8." # OID for Interface Operational Status
 
-# Tell us whats the OK State (everything else will be CRITICAL)
+# Anything above CRITTRESH will result in a CRITICAL check state
 CRITTRESH=1
 
-# Nothing more to do here
+# Internal vars
 OVERALLSTATUS=0
 PORTSDONE=""
 CRITPORTS=""
+
+# At first check that check_snmp is there
+if [ ! -x $CHECKSNMP ]; then
+  echo "UNKNOWN - Unable to find $CHECKSNMP!"
+  echo ""
+  print_help
+  exit 3
+fi
+
+print_help() {
+  echo ""
+  echo "$PROGNAME is a nagios check for monitoring HP ProCurve switches using SNMP."
+  echo ""
+  echo "Usage: ./$PROGNAME <IP or Hostname> <Community name> <comma-separated list of ports to be checked>"
+  echo "Example: ./$PROGNAME 10.10.10.2 public 1,2,4,8,23,49"
+  echo ""
+}
 
 # Check if all parameters are set
 if [ "$1" != "" ] && [ "$2" != "" ] && [ "$3" != "" ]; then
@@ -49,13 +54,13 @@ if [ "$1" != "" ] && [ "$2" != "" ] && [ "$3" != "" ]; then
   CHECKPORTSLENGTH=${#CHECKPORTS[@]}
   for ((i=0; i<${CHECKPORTSLENGTH}; i++))
   do
-    if [ "$OIDBASE" != "" ]; then
-      $CHECKSNMP -H $1 -C $2 -c $CRITTRESH -o $OIDBASE${CHECKPORTS[$i]} > /dev/null 2>&1
+    if [ "$OID_IFOPERSTATUS" != "" ]; then
+      $CHECKSNMP -H $1 -C $2 -c $CRITTRESH -o $OID_IFOPERSTATUS${CHECKPORTS[$i]} > /dev/null 2>&1
     else
       $CHECKSNMP -H $1 -C $2 -c $CRITTRESH -o ${CHECKPORTS[$i]} > /dev/null 2>&1
 		fi
 		if [ $? -ne 0 ]; then
-      if [ "$OIDBASE" != "" ]; then
+      if [ "$OID_IFOPERSTATUS" != "" ]; then
         # Ports Status os not "up" or "1" therefore we give out a CRITICAL Warning
         OVERALLSTATUS=2
         if [ ${CHECKPORTS[$i]} == 49 ]; then
@@ -65,7 +70,7 @@ if [ "$1" != "" ] && [ "$2" != "" ] && [ "$3" != "" ]; then
         fi
       else
         OVERALLSTATUS=2
-        # Cut the OIDBASE away so we only have the Port
+        # Cut the OID_IFOPERSTATUS away so we only have the Port
         ACTUALPORT=`echo ${CHECKPORTS[$i]} | rev | cut -d'.' -f1`
         if [ $ACTUALPORT == 49 ]; then
           ACTUALPORT="LACP"
@@ -73,7 +78,7 @@ if [ "$1" != "" ] && [ "$2" != "" ] && [ "$3" != "" ]; then
       fi
       CRITPORTS=$CRITPORTS$ACTUALPORT","
     else
-      if [ "$OIDBASE" != "" ]; then
+      if [ "$OID_IFOPERSTATUS" != "" ]; then
         if [ ${CHECKPORTS[$i]} == 49 ]; then
           ACTUALPORT="LACP"
         else
@@ -88,22 +93,21 @@ if [ "$1" != "" ] && [ "$2" != "" ] && [ "$3" != "" ]; then
       PORTSDONE=$PORTSDONE$ACTUALPORT","
     fi
   done
+
   # remove trailing comma of PORTSDONE and CRITPORTS
   PORTSDONE=${PORTSDONE%?}
   CRITPORTS=${CRITPORTS%?}
-  # we checked all ports - lets put all together - left ports out if all are OK
+
   case "$OVERALLSTATUS" in
-    0)  echo "SNMP OK - Checked Ports("$PORTSDONE")"
+    0)  echo "OK - Checked Ports("$PORTSDONE")"
         exit 0;;
-    2)  echo "SNMP CRITICAL - Critical Ports("$CRITPORTS") OK-Ports("$PORTSDONE")"
+    2)  echo "CRITICAL - Ports Critical("$CRITPORTS") Ports OK("$PORTSDONE")"
         exit 2;;
-  esac 
+  esac
 else
   # At least one parameter is missing, aborting as warning
-  echo "At least one Parameter is missing! (1:Host/IP 2:Community 3:Ports(comma-sep.))"
-  exit 1
+  echo "UNKNOWN - At least one Parameter is missing!"
+  echo ""
+  print_help
+  exit 3
 fi
-
-# End Script
-echo "check_procurve_ifoperstatus exited without something being checked"
-exit 1
