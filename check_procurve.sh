@@ -5,7 +5,7 @@
 
 PROGNAME=$(basename $0)
 VERSION="v1.1"
-AUTHOR="2012-2015, Martin Seener (martin@seener.de)"
+AUTHOR="2012-2015, Martin Seener (martin.seener@barzahlen.de)"
 
 # Locations
 # Uncomment next line if its in the same path as this script, or define manually
